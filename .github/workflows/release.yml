@@ -1,0 +1,89 @@
+name: Release
+
+# Triggered when you push a `vX.Y.Z` tag. Publishes to PyPI via Trusted Publishing
+# (OIDC — no API token stored in repo secrets) and drafts a GitHub release.
+#
+# One-time setup before the first tag is pushed (see CONTRIBUTING.md → Releasing):
+#   1. PyPI:    Add a "pending trusted publisher" for this repo + this workflow.
+#   2. GitHub:  Create an environment named "pypi" in repo Settings → Environments.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Verify metadata
+        run: |
+          ls -la dist/
+          uv run --with twine twine check dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # The "pypi" environment must exist in repo Settings → Environments.
+    # Optionally add protection rules (manual approval, branch restriction, etc.).
+    environment:
+      name: pypi
+      url: https://pypi.org/p/scinotes
+    permissions:
+      id-token: write   # OIDC token for Trusted Publishing — no PyPI API key needed.
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Draft GitHub release
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to create the release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create release with auto-generated notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release create "${tag}" \
+              --title "${tag}" \
+              --generate-notes \
+              --draft \
+              dist/*
+          echo "Drafted release ${tag} — review and publish via the GitHub UI."
