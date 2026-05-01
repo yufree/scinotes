@@ -1,0 +1,20 @@
+[Unit]
+Description=scinotes research assistant bot
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Edit this to your wiki directory:
+WorkingDirectory=%h/research-wiki
+# Adjust if your `scinotes` binary lives elsewhere:
+ExecStart=%h/.local/bin/scinotes run
+Restart=on-failure
+RestartSec=5
+
+# .env is loaded by scinotes itself if present in WorkingDirectory.
+# Alternatively use EnvironmentFile= here.
+# EnvironmentFile=%h/research-wiki/.env
+
+[Install]
+WantedBy=default.target

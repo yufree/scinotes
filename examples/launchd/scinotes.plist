@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.scinotes.bot</string>
+
+    <!--
+      Edit the two paths below before installing.
+      WIKI is your wiki directory (must contain CLAUDE.md and .env).
+    -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/USERNAME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>cd /Users/USERNAME/research-wiki &amp;&amp; scinotes run</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/research-wiki/scinotes.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/research-wiki/scinotes.err.log</string>
+</dict>
+</plist>
