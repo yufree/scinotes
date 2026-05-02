@@ -2,6 +2,21 @@
 
 All notable changes to scinotes will be documented in this file. Format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project tries to honour [SemVer](https://semver.org/).
 
+## [0.1.1]
+
+### Added
+- `wiki_ingest` now auto-discovers your wiki's taxonomy by parsing the layered table
+  inside `<wiki>/CLAUDE.md` (recognizes both English `Layer | ... | Pages` headers and
+  Chinese `层级 | ... | 页面`; pages cell split on `,` `,` `、`). When a parseable schema
+  is present, those layers + pages drive `wiki_ingest`'s suggestion list instead of the
+  built-in research-only default. Users with personalized multi-layer wikis (e.g. their
+  own 资料源/基线知识/历史/现状/观点/未来/科研/特殊 split) get accurate suggestions
+  without editing scinotes' source.
+- `QQ_ALLOW_ANY=1` escape hatch: set this env var to start the QQ frontend without
+  a pre-configured `QQ_ALLOWED_OPENID`. All incoming senders are logged
+  (`QQ incoming openid=... (QQ_ALLOW_ANY mode)`), making it easy to discover your
+  own openid on first setup. Not for production use.
+
 ## [0.1.0] — unreleased
 
 Initial public release.

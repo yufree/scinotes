@@ -61,10 +61,15 @@ HEADER_IDEAS = "## 卡片" if IS_ZH else "## Cards"
 mcp = FastMCP("scinotes-wiki")
 
 # ---------------------------------------------------------------------------
-# Page categories (for wiki_ingest suggestions). Research layer is universal;
-# users may extend by editing CLAUDE.md in their wiki — this dict is just a hint.
+# Page categories (for wiki_ingest suggestions).
+#
+# Default = the built-in research layer. But if the user's <wiki>/CLAUDE.md contains
+# a markdown table whose header looks like "Layer | ... | Pages" (or 中文 等价),
+# we parse it and let those layers + pages drive suggestions instead. This way
+# users with personal taxonomies (e.g. 资料源 / 基线知识 / 历史 / 现状 / 观点 / 未来 / 科研)
+# get accurate suggestions without editing scinotes' source.
 # ---------------------------------------------------------------------------
-PAGE_CATEGORIES = {
+_DEFAULT_PAGE_CATEGORIES: dict[str, list[str]] = {
     "research": [
         PAGE[k]
         for k in (
@@ -77,6 +82,55 @@ PAGE_CATEGORIES = {
         )
     ],
 }
+
+
+def _parse_categories_from_claude_md(claude_path: Path) -> dict[str, list[str]] | None:
+    """Parse the schema table out of a wiki's CLAUDE.md. Returns None if no
+    recognizable table is present.
+
+    Recognizes markdown tables whose header row mentions "层级"/"Layer" plus
+    "页面"/"Pages". Page lists are split on `,` `,` `、`. Bold markers `**` are
+    stripped from layer labels.
+    """
+    if not claude_path.exists():
+        return None
+    try:
+        content = claude_path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+
+    cats: dict[str, list[str]] = {}
+    header_seen = False
+    for raw in content.splitlines():
+        line = raw.strip()
+        if not line.startswith("|"):
+            header_seen = False
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if not header_seen:
+            joined = " ".join(cells).lower()
+            has_layer_word = any(k in joined for k in ("层级", "layer"))
+            has_pages_word = any(k in joined for k in ("页面", "pages"))
+            if has_layer_word and has_pages_word:
+                header_seen = True
+            continue
+        # In-table row
+        if all(c.replace("-", "").replace(":", "").strip() == "" for c in cells):
+            continue  # separator row
+        if len(cells) < 2:
+            continue
+        layer = cells[0].strip().strip("*").strip()
+        pages_str = cells[-1].strip()  # last column = pages
+        if not layer or not pages_str:
+            continue
+        pages = [p.strip().strip("*").strip("`") for p in re.split(r"[、,,]", pages_str) if p.strip()]
+        if pages:
+            cats[layer] = pages
+    return cats or None
+
+
+_user_cats = _parse_categories_from_claude_md(WIKI_PATH / "CLAUDE.md")
+PAGE_CATEGORIES: dict[str, list[str]] = _user_cats if _user_cats else _DEFAULT_PAGE_CATEGORIES
 
 ALL_PAGES: list[str] = []
 for _cat, _ps in PAGE_CATEGORIES.items():

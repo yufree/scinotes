@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scinotes"
-version = "0.1.0"
+version = "0.1.1"
 description = "Your research assistant — chat through Telegram/QQ/CLI, backed by markdown, augmented by LLMs."
 readme = "README.md"
 requires-python = ">=3.10"

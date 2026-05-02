@@ -34,10 +34,11 @@ class QQFrontend:
     def preflight(self) -> str | None:
         if not self.app_id or not self.app_secret:
             return "QQ_APP_ID / QQ_APP_SECRET missing"
-        if not self.allowed_openid:
+        allow_any = os.environ.get("QQ_ALLOW_ANY", "").strip().lower() in ("1", "true", "yes")
+        if not self.allowed_openid and not allow_any:
             return (
                 "QQ_ALLOWED_OPENID missing — bot would respond to anyone's C2C messages. "
-                "(scinotes refuses to start an open QQ bot.)"
+                "Set QQ_ALLOWED_OPENID=<your_openid> or set QQ_ALLOW_ANY=1 (personal/debug only)."
             )
         return None
 
@@ -58,13 +59,19 @@ class QQFrontend:
 
         wiki = self.wiki
         allowed = self.allowed_openid
+        allow_any = os.environ.get("QQ_ALLOW_ANY", "").strip().lower() in ("1", "true", "yes")
 
         class _Bot(botpy.Client):
             async def on_ready(self_inner):  # noqa: N805
                 logger.info(f"QQ bot [{self_inner.robot.name}] online")
 
             async def on_c2c_message_create(self_inner, message: C2CMessage):  # noqa: N805
-                if message.author.user_openid != allowed:
+                incoming_openid = message.author.user_openid
+                if allow_any:
+                    # QQ_ALLOW_ANY mode: log every sender so the owner can discover their openid
+                    logger.info(f"QQ incoming openid={incoming_openid!r} (QQ_ALLOW_ANY mode)")
+                elif incoming_openid != allowed:
+                    logger.warning(f"QQ ignored message from openid={incoming_openid!r} (not in allowlist)")
                     return
                 text = (message.content or "").strip()
                 if not text:
