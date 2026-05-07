@@ -211,6 +211,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             line(GREEN, "  qq: id+secret present")
         else:
             line(RED, "  qq: missing QQ_APP_ID / QQ_APP_SECRET")
+    if "slack" in frontends_env:
+        if os.environ.get("SLACK_BOT_TOKEN") and os.environ.get("SLACK_APP_TOKEN") and os.environ.get("SLACK_ALLOWED_USER_IDS"):
+            line(GREEN, "  slack: bot token + app token + allowed users present")
+        else:
+            line(RED, "  slack: missing SLACK_BOT_TOKEN, SLACK_APP_TOKEN, or SLACK_ALLOWED_USER_IDS")
 
     # Models
     print()
@@ -298,6 +303,17 @@ async def _run_async(frontends: list[str]) -> None:
             else:
                 await qq.start()
                 started.append(qq)
+
+        if "slack" in frontends:
+            from .client.slack import SlackFrontend
+
+            sl = SlackFrontend(wiki)
+            err = sl.preflight()
+            if err:
+                logger.warning(f"skipping slack: {err}")
+            else:
+                await sl.start()
+                started.append(sl)
 
         if "cli" in frontends or not started:
             if not started:

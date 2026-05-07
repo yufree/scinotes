@@ -46,6 +46,7 @@ dependencies = [
 
 [project.optional-dependencies]
 qq = ["qq-botpy>=1.2.0"]
+slack = ["slack-bolt>=1.18.0"]
 ocr = [
     # Local OCR fallback for scanned/image PDFs.
     # Also requires system binaries: tesseract (+ language packs) and poppler. See SETUP.md.
