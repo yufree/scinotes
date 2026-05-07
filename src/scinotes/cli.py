@@ -344,7 +344,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     else:
         frontends = [f.strip() for f in os.environ.get("FRONTENDS", "telegram").split(",") if f.strip()]
 
-    valid = {"telegram", "qq", "cli"}
+    valid = {"telegram", "qq", "cli", "slack"}
     bad = set(frontends) - valid
     if bad:
         print(f"unknown frontends: {','.join(bad)} (valid: {','.join(valid)})", file=sys.stderr)
