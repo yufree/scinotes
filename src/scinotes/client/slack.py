@@ -13,6 +13,7 @@ Channel name is prepended as context so the LLM can adapt behavior per channel
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 
@@ -122,10 +123,15 @@ class SlackFrontend:
             thread_ts = event.get("thread_ts") or event.get("ts")
             placeholder = await say(text="…", thread_ts=thread_ts)
             placeholder_ts = placeholder.get("ts")
+            logger.info(f"Slack placeholder posted: channel={channel} ts={placeholder_ts} user={user_id}")
 
             try:
-                response = await self.wiki.chat(prompt)
+                response = await asyncio.wait_for(self.wiki.chat(prompt), timeout=180)
                 await client.chat_update(channel=channel, ts=placeholder_ts, text=response)
+                logger.info(f"Slack response sent: channel={channel} ts={placeholder_ts}")
+            except asyncio.TimeoutError:
+                await client.chat_update(channel=channel, ts=placeholder_ts, text="（LLM 响应超时，请重试）")
+                logger.error("slack handler: wiki.chat() timed out after 180s")
             except Exception as e:
                 logger.exception("slack message handler failed")
                 await client.chat_update(channel=channel, ts=placeholder_ts, text=f"Error: {e}")
