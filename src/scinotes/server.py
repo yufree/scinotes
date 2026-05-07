@@ -195,19 +195,39 @@ def extract_urls(content: str) -> list[str]:
 
 @mcp.tool()
 def wiki_ingest(
-    content: str,
+    content: str = "",
     target_page: str = "",
     source_url: str = "",
 ) -> str:
     """Append a free-form item to a wiki page (creates page if missing).
 
     Args:
-        content:     The text or note to record (one-liner, link, snippet, etc.).
-        target_page: Page filename without extension. Empty → returns the list of
-                     existing pages so the caller can pick.
+        content:     The text or note to record. Omit when committing a previously
+                     cached save — the cached content is restored automatically.
+        target_page: Page filename without extension. Empty → caches content (if
+                     provided) and returns the list of existing pages to pick from.
         source_url:  Optional URL; if provided, content is wrapped as `[content](url)`.
     """
-    if not target_page:
+    # Case B: content provided, no target page → cache and ask
+    if content and not target_page:
+        overwriting = _PENDING_SAVE_PATH.exists()
+        payload = {"content": content, "source_url": source_url}
+        try:
+            _PENDING_SAVE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        except Exception as e:
+            return f"wiki_ingest cache write failed: {e}"
+        pages = list_wiki_pages()
+        page_list = "\n".join(f"- {p}" for p in pages)
+        cats = "\n".join(f"  {c}: {', '.join(ps)}" for c, ps in PAGE_CATEGORIES.items())
+        overwrite_note = " (previous pending save overwritten)" if overwriting else ""
+        return (
+            f"Content cached{overwrite_note}. Specify a target_page. Existing pages:\n{page_list}\n\n"
+            f"Built-in research categories:\n{cats}\n\n"
+            f"Call wiki_ingest(target_page=<name>) to commit."
+        )
+
+    # Case A: both empty → page list only
+    if not content and not target_page:
         pages = list_wiki_pages()
         page_list = "\n".join(f"- {p}" for p in pages)
         cats = "\n".join(f"  {c}: {', '.join(ps)}" for c, ps in PAGE_CATEGORIES.items())
@@ -217,6 +237,31 @@ def wiki_ingest(
             f"Pass target_page=<name> to write."
         )
 
+    # Case C: target page given, no content → restore from cache
+    if target_page and not content:
+        if not _PENDING_SAVE_PATH.exists():
+            return (
+                "No pending content found (.pending_save.json missing). "
+                "Please re-provide the content with wiki_ingest(content=…, target_page=…)."
+            )
+        try:
+            payload = json.loads(_PENDING_SAVE_PATH.read_text(encoding="utf-8"))
+        except Exception as e:
+            return f"Failed to load cached content: {e}"
+        content = payload.get("content", "")
+        if not source_url:
+            source_url = payload.get("source_url", "")
+        if not content:
+            return (
+                "Cached content is empty. "
+                "Please re-provide the content with wiki_ingest(content=…, target_page=…)."
+            )
+        try:
+            _PENDING_SAVE_PATH.unlink()
+        except Exception:
+            pass
+
+    # Case D (and resolved Case C): both content and target_page set
     page_path = WIKI_PATH / f"{target_page}.md"
     is_new = not page_path.exists()
     if is_new:
@@ -657,6 +702,7 @@ def _insert_before_header(page_name: str, target_header: str, block: str) -> boo
 # Write-audit journal — backs wiki_undo_last
 # ---------------------------------------------------------------------------
 _JOURNAL_PATH = Path(os.environ.get("SCINOTES_JOURNAL_PATH", str(WIKI_PATH / ".wiki_journal.jsonl")))
+_PENDING_SAVE_PATH = Path(os.environ.get("SCINOTES_PENDING_SAVE_PATH", str(WIKI_PATH / ".pending_save.json")))
 
 
 def _journal_append(entry: dict) -> None:
@@ -1103,10 +1149,11 @@ def wiki_undo_last() -> str:
 # ---------------------------------------------------------------------------
 def main() -> None:
     # Allow `python -m scinotes.server /path/to/wiki` as a CLI override
-    global WIKI_PATH, _JOURNAL_PATH
+    global WIKI_PATH, _JOURNAL_PATH, _PENDING_SAVE_PATH
     if len(sys.argv) > 1:
         WIKI_PATH = Path(sys.argv[1])
         _JOURNAL_PATH = Path(os.environ.get("SCINOTES_JOURNAL_PATH", str(WIKI_PATH / ".wiki_journal.jsonl")))
+        _PENDING_SAVE_PATH = Path(os.environ.get("SCINOTES_PENDING_SAVE_PATH", str(WIKI_PATH / ".pending_save.json")))
     if not WIKI_PATH.exists():
         print(f"[scinotes] error: wiki path does not exist: {WIKI_PATH}", file=sys.stderr)
         print("[scinotes] hint: run `scinotes init <path>` first", file=sys.stderr)

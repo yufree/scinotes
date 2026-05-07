@@ -141,6 +141,13 @@ FALLBACK_CHAIN = [m for m in FALLBACK_CHAIN if m in MODELS]
 # System prompt loader (i18n)
 # ---------------------------------------------------------------------------
 def _load_system_prompt() -> str:
+    # Allow fully custom prompt via env var (e.g. for lifenotes persona)
+    custom_path = os.environ.get("SCINOTES_SYSTEM_PROMPT", "").strip()
+    if custom_path:
+        p = Path(custom_path)
+        if p.exists():
+            return p.read_text(encoding="utf-8").strip()
+        print(f"[scinotes] SCINOTES_SYSTEM_PROMPT={custom_path!r} not found, falling back to built-in", file=sys.stderr)
     fname = "system.zh-CN.md" if BOT_LANG.startswith("zh") else "system.en.md"
     try:
         return (files("scinotes.prompts") / fname).read_text(encoding="utf-8").strip()
