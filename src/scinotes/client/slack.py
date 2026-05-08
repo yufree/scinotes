@@ -67,13 +67,13 @@ class SlackFrontend:
             raise RuntimeError(f"slack preflight failed: {err}")
 
         try:
-            from slack_bolt.async_app import AsyncApp
             from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
-        except ImportError:
+            from slack_bolt.async_app import AsyncApp
+        except ImportError as e:
             raise RuntimeError(
                 "slack-bolt not installed. Install scinotes with the slack extra: "
                 "`uv tool install 'scinotes[slack]'` or `pip install 'scinotes[slack]'`"
-            )
+            ) from e
 
         app = AsyncApp(token=self.bot_token)
 
