@@ -212,7 +212,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         else:
             line(RED, "  qq: missing QQ_APP_ID / QQ_APP_SECRET")
     if "slack" in frontends_env:
-        if os.environ.get("SLACK_BOT_TOKEN") and os.environ.get("SLACK_APP_TOKEN") and os.environ.get("SLACK_ALLOWED_USER_IDS"):
+        if (
+            os.environ.get("SLACK_BOT_TOKEN")
+            and os.environ.get("SLACK_APP_TOKEN")
+            and os.environ.get("SLACK_ALLOWED_USER_IDS")
+        ):
             line(GREEN, "  slack: bot token + app token + allowed users present")
         else:
             line(RED, "  slack: missing SLACK_BOT_TOKEN, SLACK_APP_TOKEN, or SLACK_ALLOWED_USER_IDS")

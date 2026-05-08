@@ -147,7 +147,10 @@ def _load_system_prompt() -> str:
         p = Path(custom_path)
         if p.exists():
             return p.read_text(encoding="utf-8").strip()
-        print(f"[scinotes] SCINOTES_SYSTEM_PROMPT={custom_path!r} not found, falling back to built-in", file=sys.stderr)
+        print(
+            f"[scinotes] SCINOTES_SYSTEM_PROMPT={custom_path!r} not found, falling back to built-in",
+            file=sys.stderr,
+        )
     fname = "system.zh-CN.md" if BOT_LANG.startswith("zh") else "system.en.md"
     try:
         return (files("scinotes.prompts") / fname).read_text(encoding="utf-8").strip()

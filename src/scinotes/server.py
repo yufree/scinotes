@@ -1153,7 +1153,9 @@ def main() -> None:
     if len(sys.argv) > 1:
         WIKI_PATH = Path(sys.argv[1])
         _JOURNAL_PATH = Path(os.environ.get("SCINOTES_JOURNAL_PATH", str(WIKI_PATH / ".wiki_journal.jsonl")))
-        _PENDING_SAVE_PATH = Path(os.environ.get("SCINOTES_PENDING_SAVE_PATH", str(WIKI_PATH / ".pending_save.json")))
+        _PENDING_SAVE_PATH = Path(
+            os.environ.get("SCINOTES_PENDING_SAVE_PATH", str(WIKI_PATH / ".pending_save.json"))
+        )
     if not WIKI_PATH.exists():
         print(f"[scinotes] error: wiki path does not exist: {WIKI_PATH}", file=sys.stderr)
         print("[scinotes] hint: run `scinotes init <path>` first", file=sys.stderr)
